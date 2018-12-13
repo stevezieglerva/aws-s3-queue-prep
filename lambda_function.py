@@ -18,7 +18,7 @@ def lambda_handler(event, context):
 		log = structlog.get_logger()
 	else:
 		log = setup_logging()
-	log = log.bind(lambda_name="aws-s3-to-es")
+	log = log.bind(lambda_name="aws-s3-queue-prep")
 	log.critical("started", input_events=json.dumps(event, indent=3))
 
 	files_found = {}
@@ -32,21 +32,45 @@ def lambda_handler(event, context):
 	file_refs = get_files_from_s3_lambda_event(event)
 	log.critical("got_file_refs", file_refs=file_refs)
 	file_text = get_file_text_from_s3_file_urls(file_refs, s3)
-
+	print("\n*** Found files:")
 	for file in file_text:
-		get_index_from_path(file)
-		text = file_text[file]
-		index_name_from_s3_path = get_index_from_path(file)
-		es = ESLambdaLog(index_name_from_s3_path)
-		for document_line in text.splitlines():
-			log.critical("prepping_to_index_in_ES", file=file, text=document_line, index=index_name_from_s3_path)
-			text_json = json.loads(document_line)
-			es.log_event(text_json)
-
+		print(file)
+		log.critical("processing_file", file=file, text=file_text[file])
+	
+	## processing here
+	## Get env variables: dest bucket, line_regex
+	
+	print("logging results")
 	return_message = get_return_message("Success", file_text)
-	log.critical("finished", return_message=json.dumps(return_message, indent=3))
+	log.critical("result", return_message=json.dumps(return_message, indent=3))
+	log.critical("finished")
 	return return_message
 
+def get_environment_variables_with_defaults(environ):
+	env_variables_set = {}
+
+	env_variables_set["dest_bucket"] = "https://s3.amazonaws.com/s3-to-es/bulk"
+	if "dest_bucket" in environ:
+		env_variables_set["dest_bucket"] = environ["dest_bucket"]
+	env_variables_set["reg_ex_1"] = ""
+	if "reg_ex_1" in environ:
+		env_variables_set["reg_ex_1"] = environ["reg_ex_1"]
+	env_variables_set["reg_ex_2"] = ""
+	if "reg_ex_2" in environ:
+		env_variables_set["reg_ex_2"] = environ["reg_ex_2"]
+	env_variables_set["reg_ex_3"] = ""
+	if "reg_ex_3" in environ:
+		env_variables_set["reg_ex_3"] = environ["reg_ex_3"]
+	return env_variables_set
+
+
+def move_processed_file(s3, source_bucket, source_key, destination_bucket):
+	s3 = boto3.resource('s3')
+	copy_source = {
+		'Bucket': 'mybucket',
+		'Key': 'mykey'
+	}
+	s3.meta.client.copy(copy_source, 'otherbucket', 'otherkey')
 
 def get_index_from_path(path):
 	#https://s3.amazonaws.com/aws-s3-to-es/index_name_dir/test.txt
