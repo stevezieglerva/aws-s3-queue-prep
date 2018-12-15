@@ -9,8 +9,8 @@ class TestMethods(unittest.TestCase):
 	def test_get_file_text_from_s3_file_urls__one_file__one_file_text_returned(self):
 		# Arrange
 		s3 = boto3.resource('s3')
-		bucket = "aws-s3-to-es"
-		key = "integration_test_1.txt"
+		bucket = "code-index"
+		key = "prep-input\\USTIF\\integration_test_1.txt"
 		file_text = "test_1.txt file contents"
 		file_text_binary = bytes(file_text, 'utf-8')
 		object = s3.Object(bucket, key)

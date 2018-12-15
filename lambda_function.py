@@ -11,66 +11,102 @@ import traceback
 import logging
 import structlog
 from urllib.parse import urlparse
+import re
 
 
 def lambda_handler(event, context):
-	if "text_logging" in os.environ:
-		log = structlog.get_logger()
-	else:
-		log = setup_logging()
-	log = log.bind(lambda_name="aws-s3-queue-prep")
-	log.critical("started", input_events=json.dumps(event, indent=3))
+	try:
+		if "text_logging" in os.environ:
+			log = structlog.get_logger()
+		else:
+			log = setup_logging()
+		log = log.bind(lambda_name="aws-s3-queue-prep")
+		log.critical("started", input_events=json.dumps(event, indent=3))
 
-	files_found = {}
-	s3 = boto3.resource('s3')
+		env_vars = get_environment_variables_with_defaults(os.environ)
+		print()
+		print("Environment Variables:")
+		print(env_vars)
+		files_found = {}
+		s3 = boto3.resource("s3")
+		sqs = boto3.client("sqs")
 
-	if "Records" not in event:
-		return_message = get_return_message("Error: No key 'Records' in the event", files_found)
-		log.error("invalid_event", return_message=return_message)
+		if "Records" not in event:
+			return_message = get_return_message("Error: No key 'Records' in the event", files_found)
+			log.error("invalid_event", return_message=return_message)
+			return return_message
+
+		file_refs = get_files_from_s3_lambda_event(event)
+		file_text = get_file_text_from_s3_file_urls(file_refs, s3)
+		print("Found files:")
+		count = 0
+		for file in file_text:
+			count = count + 1 
+			print(str(count) + ". " + file)
+			log = log.bind(processing_file=file)
+			text = file_text[file]
+			for env_variable in ["regex_1", "regex_2", "regex_3"]:
+				if env_vars[env_variable] != "":
+					regex_parts = env_vars[env_variable].split("-;-")
+					regex_find = regex_parts[0]
+					regex_replace = regex_parts[1]
+					text = re.sub(regex_find, regex_replace, text)
+			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
+			create_updated_file_in_destination(s3, dest_file, text)
+			move_processed_file(s3, file)
+			response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index.fifo", MessageBody=dest_file, MessageGroupId="code-index")
+		print("finished")
+		return_message = get_return_message("Success", file_refs)
+		print("")
+		log.critical("result", return_message=json.dumps(return_message, indent=3))
+		return return_message
+	except Exception as e:
+		exception_name = type(e).__name__
+		print("Exception occurred: " + exception_name + "=" + str(e))
+		log.exception("Exception occurred", exception_name=exception_name)
+		return_message = get_return_message("Exception occurred", file_refs)
 		return return_message
 
-	file_refs = get_files_from_s3_lambda_event(event)
-	log.critical("got_file_refs", file_refs=file_refs)
-	file_text = get_file_text_from_s3_file_urls(file_refs, s3)
-	print("\n*** Found files:")
-	for file in file_text:
-		print(file)
-		log.critical("processing_file", file=file, text=file_text[file])
-	
-	## processing here
-	## Get env variables: dest bucket, line_regex
-	
-	print("logging results")
-	return_message = get_return_message("Success", file_text)
-	log.critical("result", return_message=json.dumps(return_message, indent=3))
-	log.critical("finished")
-	return return_message
+
+
+def get_destination_file_url(file_path_regex, source_file):
+	destination_file_url = ""
+	if file_path_regex != "":
+		regex_parts = file_path_regex.split("-;-")
+		regex_find = regex_parts[0]
+		regex_replace = regex_parts[1]
+		destination_file_url = re.sub(regex_find, regex_replace, source_file)
+	return destination_file_url
+
 
 def get_environment_variables_with_defaults(environ):
 	env_variables_set = {}
+	for env_variable in ["regex_1", "regex_2", "regex_3", "file_path_regex"]:
+		env_variables_set[env_variable] = ""
+		if env_variable in environ:
+			if "-;-" not in environ[env_variable]:
+				raise ValueError("Expected " + env_variable + " environment variable to have a -;- separating the find clause from the replace clause.")
+			env_variables_set[env_variable] = environ[env_variable]
+	if env_variables_set["file_path_regex"] == "":
+		env_variables_set["file_path_regex"] = "prep-input-;-prep-output"
 
-	env_variables_set["dest_bucket"] = "https://s3.amazonaws.com/s3-to-es/bulk"
-	if "dest_bucket" in environ:
-		env_variables_set["dest_bucket"] = environ["dest_bucket"]
-	env_variables_set["reg_ex_1"] = ""
-	if "reg_ex_1" in environ:
-		env_variables_set["reg_ex_1"] = environ["reg_ex_1"]
-	env_variables_set["reg_ex_2"] = ""
-	if "reg_ex_2" in environ:
-		env_variables_set["reg_ex_2"] = environ["reg_ex_2"]
-	env_variables_set["reg_ex_3"] = ""
-	if "reg_ex_3" in environ:
-		env_variables_set["reg_ex_3"] = environ["reg_ex_3"]
 	return env_variables_set
 
 
-def move_processed_file(s3, source_bucket, source_key, destination_bucket):
-	s3 = boto3.resource('s3')
-	copy_source = {
-		'Bucket': 'mybucket',
-		'Key': 'mykey'
-	}
-	s3.meta.client.copy(copy_source, 'otherbucket', 'otherkey')
+def create_updated_file_in_destination(s3, dest_file_url, text):
+	print("\tWriting to: " + dest_file_url)
+	dest_bucket = get_bucket_name_from_url(dest_file_url)
+	dest_key = get_key_from_url(dest_file_url)
+	s3.meta.client.put_object(Bucket=dest_bucket, Key=dest_key, Body=text)
+
+def move_processed_file(s3, source_file_url):
+	print("\tDeleting from: " + source_file_url)
+	source_bucket = get_bucket_name_from_url(source_file_url)
+	source_key = get_key_from_url(source_file_url)
+	s3.meta.client.delete_object(Bucket=source_bucket, Key=source_key)
+
+
+
 
 def get_index_from_path(path):
 	#https://s3.amazonaws.com/aws-s3-to-es/index_name_dir/test.txt

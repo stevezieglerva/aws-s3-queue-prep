@@ -4,6 +4,7 @@ import os
 import traceback
 import logging
 import structlog
+from urllib.parse import urlparse
 
 
 def get_files_from_s3_lambda_event(event):
@@ -45,6 +46,19 @@ def get_bucket_file_url(bucket, key):
 	file_url = "https://s3.amazonaws.com/" + bucket + "/" + key
 	return file_url
 
+
 def get_bucket_name_from_arn(bucket_arn):
 	bucket_name = bucket_arn.rsplit(":", 1)[-1]
 	return bucket_name
+
+
+def get_bucket_name_from_url(file_url):
+	parts = urlparse(file_url)
+	paths = parts.path.split("/")
+	return paths[1]
+
+def get_key_from_url(file_url):
+	parts = urlparse(file_url)
+	bucket_name = get_bucket_name_from_url(file_url)
+	key = parts.path.replace("/" + bucket_name + "/", "")
+	return key
