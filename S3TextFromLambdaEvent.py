@@ -42,22 +42,26 @@ def get_file_text_from_s3_file_urls(s3_file_url_dict, s3_boto):
 
 
 def get_bucket_file_url(bucket, key):
+	"""Returns the a URL to an S3 object given a bucket name and"""
 	#https://s3.amazonaws.com/link-checker/2018-05-27-235740.txt
 	file_url = "https://s3.amazonaws.com/" + bucket + "/" + key
 	return file_url
 
 
 def get_bucket_name_from_arn(bucket_arn):
+	"""Returns the bucket from an S3 ojbect arn"""
 	bucket_name = bucket_arn.rsplit(":", 1)[-1]
 	return bucket_name
 
 
 def get_bucket_name_from_url(file_url):
+	"""Returns the bucket name from an S3 ojbect URL"""
 	parts = urlparse(file_url)
 	paths = parts.path.split("/")
 	return paths[1]
 
 def get_key_from_url(file_url):
+	"""Returns the key from an S3 ojbect URL"""	
 	parts = urlparse(file_url)
 	bucket_name = get_bucket_name_from_url(file_url)
 	key = parts.path.replace("/" + bucket_name + "/", "")

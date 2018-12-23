@@ -10,7 +10,7 @@ class TestMethods(unittest.TestCase):
 		# Arrange
 		s3 = boto3.resource('s3')
 		bucket = "code-index"
-		key = "prep-input\\USTIF\\integration_test_1.txt"
+		key = "prep-input\\ProjectX\\integration_test_1.txt"
 		file_text = "test_1.txt file contents"
 		file_text_binary = bytes(file_text, 'utf-8')
 		object = s3.Object(bucket, key)

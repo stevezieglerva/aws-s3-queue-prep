@@ -18,7 +18,7 @@ event_one_file = {
 			"object": {
 			"eTag": "0123456789abcdef0123456789abcdef",
 			"sequencer": "0A1B2C3D4E5F678901",
-			"key": "prep-input/USTIF/integration_test_2.txt",
+			"key": "prep-input/ProjectX/integration_test_2.txt",
 			"size": 1024
 			},
 			"bucket": {
@@ -50,7 +50,7 @@ class TestMethods(unittest.TestCase):
 		# Arrange
 		s3 = boto3.resource('s3')
 		bucket = "code-index"
-		key = "prep-input/USTIF/integration_test_2.txt"
+		key = "prep-input/ProjectX/integration_test_2.txt"
 		file_text = "import java;\nprint('Hello world'); \n if x <> 5\n-;-"
 		file_text_binary = bytes(file_text, 'utf-8')
 		object = s3.Object(bucket, key)
@@ -63,7 +63,7 @@ class TestMethods(unittest.TestCase):
 		os.environ["regex_1"] = "[^a-zA-Z0-9\\n \\(\\);\'_\-+\n\t\{\}\*]+-;-"
 
 		# Act
-		result = lambda_handler(event_one_file, "Integration Test")
+		result = lambda_handler(event_one_file, None)
 		print(json.dumps(result, indent=3))
 
 		# Assert

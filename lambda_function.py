@@ -4,6 +4,7 @@ import datetime
 import time
 from ESLambdaLog import *
 from LocalTime import *
+from Event import *
 from S3TextFromLambdaEvent import *
 import sys
 import os
@@ -21,6 +22,8 @@ def lambda_handler(event, context):
 		else:
 			log = setup_logging()
 		log = log.bind(lambda_name="aws-s3-queue-prep")
+		if context is not None:
+			log = log.bind(aws_request_id=context.aws_request_id)
 		log.critical("started", input_events=json.dumps(event, indent=3))
 
 		env_vars = get_environment_variables_with_defaults(os.environ)
@@ -29,7 +32,7 @@ def lambda_handler(event, context):
 		print(env_vars)
 		files_found = {}
 		s3 = boto3.resource("s3")
-		sqs = boto3.client("sqs")
+		#sqs = boto3.client("sqs")
 
 		if "Records" not in event:
 			return_message = get_return_message("Error: No key 'Records' in the event", files_found)
@@ -54,17 +57,18 @@ def lambda_handler(event, context):
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
 			move_processed_file(s3, file)
-			response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index.fifo", MessageBody=dest_file, MessageGroupId="code-index")
+			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
+			event = Event("code-index", dest_file)
 		print("finished")
 		return_message = get_return_message("Success", file_refs)
 		print("")
-		log.critical("result", return_message=json.dumps(return_message, indent=3))
+		log.critical("finished", return_message=json.dumps(return_message, indent=3))
 		return return_message
 	except Exception as e:
 		exception_name = type(e).__name__
 		print("Exception occurred: " + exception_name + "=" + str(e))
 		log.exception("Exception occurred", exception_name=exception_name)
-		return_message = get_return_message("Exception occurred", file_refs)
+		return_message = get_return_message("Exception occurred", {})
 		return return_message
 
 
@@ -81,7 +85,7 @@ def get_destination_file_url(file_path_regex, source_file):
 
 def get_environment_variables_with_defaults(environ):
 	env_variables_set = {}
-	for env_variable in ["regex_1", "regex_2", "regex_3", "file_path_regex"]:
+	for env_variable in ["regex_1", "regex_2", "regex_3", "file_path_regex", "exclude_file_filters"]:
 		env_variables_set[env_variable] = ""
 		if env_variable in environ:
 			if "-;-" not in environ[env_variable]:
@@ -89,6 +93,8 @@ def get_environment_variables_with_defaults(environ):
 			env_variables_set[env_variable] = environ[env_variable]
 	if env_variables_set["file_path_regex"] == "":
 		env_variables_set["file_path_regex"] = "prep-input-;-prep-output"
+	if env_variables_set["exclude_file_filters"] == "":
+		env_variables_set["exclude_file_filters"] = ".*\.zip|.*\.jar"
 
 	return env_variables_set
 

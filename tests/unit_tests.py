@@ -100,6 +100,8 @@ class TestMethods(unittest.TestCase):
 		self.assertEqual(result, "https://s3.amazonaws.com/code-index/prep-output/test.txt")
 
 
+
+
 if __name__ == '__main__':
 	unittest.main()		
 
