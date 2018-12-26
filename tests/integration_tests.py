@@ -69,6 +69,9 @@ class TestMethods(unittest.TestCase):
 		# Assert
 		self.assertEqual(result["msg"], "Success")
 
+
+
+
 if __name__ == '__main__':
 	unittest.main()		
 
