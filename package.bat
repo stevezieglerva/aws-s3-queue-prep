@@ -1,4 +1,5 @@
 set function_name=aws-code-index-escape-files
+title %function_name%
 
 call cd .\tests
 call run_all_tests.bat
@@ -6,6 +7,7 @@ set test_error=%ERRORLEVEL%
 call cd ..
 IF %test_error%==1 goto failed
 
+call commit_and_push.bat
 
 REM Zip the lambda function
 call del /q lambda_function.zip
