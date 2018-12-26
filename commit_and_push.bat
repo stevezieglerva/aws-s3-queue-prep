@@ -2,7 +2,6 @@ echo off
 
 git diff
 
-
 set /p msg="Enter commit message: "
 echo %msg%
 
