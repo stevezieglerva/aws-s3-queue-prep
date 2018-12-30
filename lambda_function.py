@@ -68,7 +68,7 @@ def lambda_handler(event, context):
 	except Exception as e:
 		exception_name = type(e).__name__
 		print("Exception occurred: " + exception_name + "=" + str(e))
-		log.exception("Exception occurred", exception_name=exception_name)
+		log.exception("exception", exception_name=exception_name)
 		return_message = get_return_message("Exception occurred", {})
 		return return_message
 
