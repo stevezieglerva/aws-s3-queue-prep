@@ -1,4 +1,3 @@
-
 import sys
 import os
 import traceback
@@ -66,3 +65,10 @@ def get_key_from_url(file_url):
 	bucket_name = get_bucket_name_from_url(file_url)
 	key = parts.path.replace("/" + bucket_name + "/", "")
 	return key
+
+def create_s3_text_file(bucket, key, file_text, s3_boto):
+	file_text_binary = bytes(file_text, 'utf-8')
+	object = s3_boto.Object(bucket, key)
+	response = object.put(Body=file_text_binary)
+	return response
+

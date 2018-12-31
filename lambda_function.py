@@ -56,9 +56,9 @@ def lambda_handler(event, context):
 					text = re.sub(regex_find, regex_replace, text)
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
+			create_es_file_to_index(dest_file, text)
 			move_processed_file(s3, file)
 			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
-			event = Event("code-index", dest_file)
 		print("finished")
 		return_message = get_return_message("Success", file_refs)
 		print("")
@@ -71,7 +71,6 @@ def lambda_handler(event, context):
 		log.exception("exception", exception_name=exception_name)
 		return_message = get_return_message("Exception occurred", {})
 		return return_message
-
 
 
 def get_destination_file_url(file_path_regex, source_file):
@@ -106,6 +105,7 @@ def create_updated_file_in_destination(s3, dest_file_url, text):
 	dest_key = get_key_from_url(dest_file_url)
 	s3.meta.client.put_object(Bucket=dest_bucket, Key=dest_key, Body=text)
 
+
 def move_processed_file(s3, source_file_url):
 	print("\tDeleting from: " + source_file_url)
 	source_bucket = get_bucket_name_from_url(source_file_url)
@@ -113,27 +113,11 @@ def move_processed_file(s3, source_file_url):
 	s3.meta.client.delete_object(Bucket=source_bucket, Key=source_key)
 
 
-
-
-def get_index_from_path(path):
-	#https://s3.amazonaws.com/aws-s3-to-es/index_name_dir/test.txt
-	urlparts = urlparse(path)
-	if urlparts.netloc != "s3.amazonaws.com":
-		raise ValueError("Expected netloc of '" + path + "' to be 's3.amazonaws.com'") 
-	urlpath = urlparts.path
-	log = structlog.get_logger()
-	log.info("get_index_from_path", path=urlpath)
-	path_parts = urlpath.split("/")
-	if len(path_parts) < 2:
-		raise ValueError("Expected '" + path + "' to have at least two items in the path") 
-	if path_parts[1] != "aws-s3-to-es":
-		raise ValueError("Expected '" + path + "' to use the aws-s3-to-es bucket.") 
-	index_name = ""
-	if len(path_parts) == 3:
-		index_name = "general"
-	if len(path_parts) == 4:
-		index_name = path_parts[2]
-	return index_name
+def create_es_file_to_index(filename, file_text):
+	data = {}
+	data["filename"] = filename
+	data["file_text"] = file_text
+	create_es_event(index="code-index", id=filename, data=data)
 
 
 def get_return_message(msg, files_found):
