@@ -12,7 +12,6 @@ def get_files_from_s3_lambda_event(event):
 
 	if "Records" not in event:
 		raise ValueError("Records key not in event")
-
 	count = 0
 	for record in event["Records"]:
 		count = count + 1
