@@ -58,15 +58,7 @@ def lambda_handler(event, context):
 			create_updated_file_in_destination(s3, dest_file, text)
 
 			print("Skipping ES log event for testing firehose")
-			#create_es_file_to_index(dest_file, text)
-			firehose = boto3.client("firehose")
-			response = firehose.put_record(
-				DeliveryStreamName="test-firehose",
-				Record={
-					"Data": "{\"filename\" : \"" + dest_file + "\" }"
-				}
-			)
-			print(response)
+			create_es_file_to_index(dest_file, text)
 
 
 			move_processed_file(s3, file)
