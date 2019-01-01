@@ -6,6 +6,8 @@ import uuid
 
 
 def create_es_event(data, index = "", id = "", ):
+	print("About to create event")
+
 	local_time = LocalTime()
 	s3 = boto3.resource("s3")
 
@@ -44,13 +46,16 @@ def create_es_event(data, index = "", id = "", ):
 	message_text_string =  json.dumps(es_queue_event)
 	filename = "es-bulk-files-input/" + shard + "/" + index + "_" + filename_id + ".json"
 
-
+	print("About to stream into firehose")
 	firehose = boto3.client("firehose")
-	response = firehose.put_record(
-		DeliveryStreamName="test-firehose",
-		Record={
+	record = {
 			"Data": json.dumps(es_queue_event) 
 		}
+	print("record=")
+	print(record)
+	response = firehose.put_record(
+		DeliveryStreamName="test-firehose",
+		Record=record
 	)
 	print(response)
 
