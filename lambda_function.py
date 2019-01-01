@@ -63,7 +63,7 @@ def lambda_handler(event, context):
 			response = firehose.put_record(
 				DeliveryStreamName="test-firehose",
 				Record={
-					"Data": b'{\"filename\" : \"" + dest_file + "\" }'
+					"Data": "{\"filename\" : \"" + dest_file + "\" }"
 				}
 			)
 			print(response)
