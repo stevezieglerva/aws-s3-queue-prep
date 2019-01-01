@@ -49,7 +49,7 @@ def create_es_event(data, index = "", id = "", ):
 	response = firehose.put_record(
 		DeliveryStreamName="test-firehose",
 		Record={
-			"Data": "{\"filename\" : \"" + json.dumps(es_queue_event) + "\" }"
+			"Data": json.dumps(es_queue_event) 
 		}
 	)
 	print(response)
