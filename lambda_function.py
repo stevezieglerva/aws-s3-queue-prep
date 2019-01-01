@@ -56,7 +56,19 @@ def lambda_handler(event, context):
 					text = re.sub(regex_find, regex_replace, text)
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
-			create_es_file_to_index(dest_file, text)
+
+			print("Skipping ES log event for testing firehose")
+			#create_es_file_to_index(dest_file, text)
+			firehose = boto3.client("firehose")
+			response = firehose.put_record(
+				DeliveryStreamName="test-firehose",
+				Record={
+					"Data": b'{\"filename\" : \"" + dest_file + "\" }'
+				}
+			)
+			print(response)
+
+
 			move_processed_file(s3, file)
 			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
 		print("finished")
