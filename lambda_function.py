@@ -57,6 +57,19 @@ def lambda_handler(event, context):
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
 
+			print("About to stream into firehose")
+			firehose = boto3.client("firehose")
+			record = {
+					"Data": "_____" + dest_file + ":\n" + text
+				}
+			print("record=")
+			print(record)
+			response = firehose.put_record(
+				DeliveryStreamName="code-index-es-bulk",
+				Record=record
+			)
+			print(response)
+
 			print("Skipping ES log event for testing firehose")
 			create_es_file_to_index(dest_file, text)
 
