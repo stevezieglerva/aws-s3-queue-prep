@@ -60,7 +60,7 @@ def lambda_handler(event, context):
 			print("About to stream into firehose")
 			firehose = boto3.client("firehose")
 			record = {
-					"Data": "_____" + dest_file + ":\n" + text
+					"Data": "_____" + dest_file + ": " + text + "\n"
 				}
 			print("record=")
 			print(record)
