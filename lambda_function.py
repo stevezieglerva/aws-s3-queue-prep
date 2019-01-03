@@ -70,6 +70,13 @@ def lambda_handler(event, context):
 			)
 			print(response)
 
+			record = {
+					"Data": json.dumps({"index" : "code-index", "filename" : dest_file}) + "\n"
+				}
+			print("record=")
+			print(record)
+
+
 			#print("Skipping ES log event for testing firehose")
 			#create_es_file_to_index(dest_file, text)
 
