@@ -60,18 +60,18 @@ def lambda_handler(event, context):
 			print("About to stream into firehose")
 			firehose = boto3.client("firehose")
 			record = {
-					"Data": "_____" + dest_file + ": " + text + "\n"
+					"Data": "\"" + dest_file + "\", \"" + text + "\"\n"
 				}
 			print("record=")
 			print(record)
 			response = firehose.put_record(
-				DeliveryStreamName="code-index-es-bulk",
+				DeliveryStreamName="code-index-files-csv",
 				Record=record
 			)
 			print(response)
 
-			print("Skipping ES log event for testing firehose")
-			create_es_file_to_index(dest_file, text)
+			#print("Skipping ES log event for testing firehose")
+			#create_es_file_to_index(dest_file, text)
 
 
 			move_processed_file(s3, file)
