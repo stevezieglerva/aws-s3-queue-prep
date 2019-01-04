@@ -63,8 +63,8 @@ def lambda_handler(event, context):
 			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}\n"
 			response = stream_firehose_string("code-index-files-es-bulk", index_header)
 			index_data = {"filename" : dest_file, "file_text" : text}
-			response = stream_firehose_event("code-index-files-es-bulk", index_data)
-			response = stream_firehose_string("code-index-files-es-bulk", "\n")
+			index_data = add_timestamps_to_event(index_data)
+			response = stream_firehose_string("code-index-files-es-bulk", index_header + "\n" + json.dumps(index_data) + "\n")
 
 			move_processed_file(s3, file)
 			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
