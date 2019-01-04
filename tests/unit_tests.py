@@ -100,7 +100,26 @@ class TestMethods(unittest.TestCase):
 		self.assertEqual(result, "https://s3.amazonaws.com/code-index/prep-output/test.txt")
 
 
+	def test_get_project_name_from_s3_url__valid_url__returns_project_name(self):
+		# Assert
+		input = "https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js"
 
+		# Act
+		project_name = get_project_name_from_s3_url(input)
+
+		# Assert
+		self.assertEqual(project_name, "ProjectX")
+
+
+	def test_get_file_extension_from_s3_url__valid_url__returns_project_name(self):
+		# Assert
+		input = "https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js"
+
+		# Act
+		project_name = get_file_extension_from_s3_url(input)
+
+		# Assert
+		self.assertEqual(project_name, ".js")		
 
 if __name__ == '__main__':
 	unittest.main()		

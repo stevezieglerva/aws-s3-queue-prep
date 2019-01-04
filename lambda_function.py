@@ -13,6 +13,8 @@ import structlog
 from urllib.parse import urlparse
 import re
 from firehose_helpers import *
+from urllib.parse import urlparse
+import os.path
 
 def lambda_handler(event, context):
 	try:
@@ -56,12 +58,16 @@ def lambda_handler(event, context):
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
 
+			project = get_project_name_from_s3_url(file)
+			raw_filename = get_filename_from_s3_url(file)
+			file_ext = get_file_extension_from_s3_url(file)
+
 			# CSV format
 			response = stream_firehose_string("code-index-files-csv", "\"" + dest_file + "\", \"" + text + "\"\n")
 
 			# Elasticsearch bulk format
 			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}"
-			index_data = {"filename" : dest_file, "file_text" : text}
+			index_data = {"filename" : dest_file, "file_text" : text, "raw_filename" : raw_filename, "file_extension" : file_ext, "project" : project}
 			index_data = add_timestamps_to_event(index_data)
 			response = stream_firehose_string("code-index-files-es-bulk", index_header + "\n" + json.dumps(index_data) + "\n")
 
@@ -159,4 +165,23 @@ def setup_logging():
     )
     return structlog.get_logger()
 
+
+def get_project_name_from_s3_url(s3_url):
+	#https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js
+	url_parts = urlparse(s3_url)
+	path_parts = url_parts.path.split('/')
+	return path_parts[3]
+
+def get_filename_from_s3_url(s3_url):
+	#https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js
+	path_parts = s3_url.split('/')
+	filename = path_parts[len(path_parts) - 1]
+	return filename
+
+def get_file_extension_from_s3_url(s3_url):
+	#https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js
+	path_parts = s3_url.split('/')
+	filename = path_parts[len(path_parts) - 1]
+	extension = os.path.splitext(filename)[1]
+	return extension
 

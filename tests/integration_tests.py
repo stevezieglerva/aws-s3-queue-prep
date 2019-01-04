@@ -61,6 +61,7 @@ class TestMethods(unittest.TestCase):
 		s3_list[s3_url] = {"bucket" : bucket, "key" : key}
 
 		os.environ["regex_1"] = "[^a-zA-Z0-9\\n \\(\\);\'_\-+\n\t\{\}\*]+-;-"
+		os.environ["regex_2"] = "\n-;-     "
 
 		# Act
 		result = lambda_handler(event_one_file, None)
