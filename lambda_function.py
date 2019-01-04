@@ -63,7 +63,13 @@ def lambda_handler(event, context):
 			file_ext = get_file_extension_from_s3_url(file)
 
 			# CSV format
-			response = stream_firehose_string("code-index-files-csv", "\"" + dest_file + "\", \"" + text + "\"\n")
+			quoted_filename = "\"" + dest_file + "\""
+			quoted_text = "\"" + text + "\""
+			quoted_project =  "\"" + project + "\""
+			quoted_raw_filename =  "\"" + raw_filename + "\""
+			quoted_file_ext =  "\"" + file_ext + "\""
+			csv_line = "{}, {}, {}, {}, {}\n".format(quoted_filename, quoted_text, quoted_project, quoted_raw_filename, quoted_file_ext)
+			response = stream_firehose_string("code-index-files-csv", csv_line)
 
 			# Elasticsearch bulk format
 			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}"
