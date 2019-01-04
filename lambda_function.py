@@ -56,11 +56,15 @@ def lambda_handler(event, context):
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
 
+			# CSV format
 			response = stream_firehose_string("code-index-files-csv", "\"" + dest_file + "\", \"" + text + "\"\n")
-			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}"
+
+			# Elasticsearch bulk format
+			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}\n"
 			response = stream_firehose_string("code-index-files-es-bulk", index_header)
 			index_data = {"filename" : dest_file, "file_text" : text}
 			response = stream_firehose_event("code-index-files-es-bulk", index_data)
+			response = stream_firehose_string("code-index-files-es-bulk", "\n")
 
 			move_processed_file(s3, file)
 			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
