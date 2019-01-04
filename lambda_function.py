@@ -60,7 +60,7 @@ def lambda_handler(event, context):
 			response = stream_firehose_string("code-index-files-csv", "\"" + dest_file + "\", \"" + text + "\"\n")
 
 			# Elasticsearch bulk format
-			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}\n"
+			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}"
 			index_data = {"filename" : dest_file, "file_text" : text}
 			index_data = add_timestamps_to_event(index_data)
 			response = stream_firehose_string("code-index-files-es-bulk", index_header + "\n" + json.dumps(index_data) + "\n")
