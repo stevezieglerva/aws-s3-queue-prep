@@ -4,7 +4,6 @@ import datetime
 import time
 from ESLambdaLog import *
 from LocalTime import *
-from Event import *
 from S3TextFromLambdaEvent import *
 import sys
 import os
@@ -13,7 +12,7 @@ import logging
 import structlog
 from urllib.parse import urlparse
 import re
-
+from firehose_helpers import *
 
 def lambda_handler(event, context):
 	try:
@@ -57,29 +56,11 @@ def lambda_handler(event, context):
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
 
-			print("About to stream into firehose")
-			firehose = boto3.client("firehose")
-			record = {
-					"Data": "\"" + dest_file + "\", \"" + text + "\"\n"
-				}
-			print("record=")
-			print(record)
-			response = firehose.put_record(
-				DeliveryStreamName="code-index-files-csv",
-				Record=record
-			)
-			print(response)
-
-			record = {
-					"Data": json.dumps({"index" : "code-index", "filename" : dest_file}) + "\n"
-				}
-			print("record=")
-			print(record)
-
-
-			#print("Skipping ES log event for testing firehose")
-			#create_es_file_to_index(dest_file, text)
-
+			response = stream_firehose_string("code-index-files-csv", "\"" + dest_file + "\", \"" + text + "\"\n")
+			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}"
+			response = stream_firehose_string("code-index-files-es-bulk", index_header)
+			index_data = {"filename" : dest_file, "file_text" : text}
+			response = stream_firehose_event("code-index-files-es-bulk", index_data)
 
 			move_processed_file(s3, file)
 			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
