@@ -33,7 +33,6 @@ def lambda_handler(event, context):
 		print(env_vars)
 		files_found = {}
 		s3 = boto3.resource("s3")
-		#sqs = boto3.client("sqs")
 
 		if "Records" not in event:
 			return_message = get_return_message("Error: No key 'Records' in the event", files_found)
@@ -57,28 +56,7 @@ def lambda_handler(event, context):
 					text = re.sub(regex_find, regex_replace, text)
 			dest_file = get_destination_file_url(env_vars["file_path_regex"] , file)
 			create_updated_file_in_destination(s3, dest_file, text)
-
-			project = get_project_name_from_s3_url(file)
-			raw_filename = get_filename_from_s3_url(file)
-			file_ext = get_file_extension_from_s3_url(file)
-
-			# CSV format
-			quoted_filename = "\"" + dest_file + "\""
-			quoted_text = "\"" + text + "\""
-			quoted_project =  "\"" + project + "\""
-			quoted_raw_filename =  "\"" + raw_filename + "\""
-			quoted_file_ext =  "\"" + file_ext + "\""
-			csv_line = "{}, {}, {}, {}, {}\n".format(quoted_filename, quoted_text, quoted_project, quoted_raw_filename, quoted_file_ext)
-			response = stream_firehose_string("code-index-files-csv", csv_line)
-
-			# Elasticsearch bulk format
-			index_header = "{\"index\": {\"_index\": \"code-index\", \"_type\": \"doc\"}}"
-			index_data = {"filename" : dest_file, "file_text" : text, "raw_filename" : raw_filename, "file_extension" : file_ext, "project" : project}
-			index_data = add_timestamps_to_event(index_data)
-			response = stream_firehose_string("code-index-files-es-bulk", index_header + "\n" + json.dumps(index_data) + "\n")
-
 			move_processed_file(s3, file)
-			#response = sqs.send_message(QueueUrl="https://queue.amazonaws.com/112280397275/code-index", MessageBody=dest_file)
 		print("finished")
 		return_message = get_return_message("Success", file_refs)
 		print("")
@@ -172,22 +150,5 @@ def setup_logging():
     return structlog.get_logger()
 
 
-def get_project_name_from_s3_url(s3_url):
-	#https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js
-	url_parts = urlparse(s3_url)
-	path_parts = url_parts.path.split('/')
-	return path_parts[3]
 
-def get_filename_from_s3_url(s3_url):
-	#https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js
-	path_parts = s3_url.split('/')
-	filename = path_parts[len(path_parts) - 1]
-	return filename
-
-def get_file_extension_from_s3_url(s3_url):
-	#https://s3.amazonaws.com/code-index/prep-output/ProjectX/docroot/js/jquery-1.9.1.js
-	path_parts = s3_url.split('/')
-	filename = path_parts[len(path_parts) - 1]
-	extension = os.path.splitext(filename)[1]
-	return extension
 
