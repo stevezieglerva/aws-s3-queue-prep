@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 import os.path
 
 def lambda_handler(event, context):
-	print(os.environ)
 	try:
 		if "text_logging" in os.environ:
 			log = structlog.get_logger()
@@ -26,6 +25,7 @@ def lambda_handler(event, context):
 		log = log.bind(lambda_name="aws-s3-queue-prep")
 		if context is not None:
 			log = log.bind(aws_request_id=context.aws_request_id)
+			print(context)
 		log.critical("started", input_events=json.dumps(event, indent=3))
 
 		env_vars = get_environment_variables_with_defaults(os.environ)
