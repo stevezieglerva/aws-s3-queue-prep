@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 import os.path
 
 def lambda_handler(event, context):
+	print(os.environ)
 	try:
 		if "text_logging" in os.environ:
 			log = structlog.get_logger()
