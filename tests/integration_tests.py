@@ -5,6 +5,13 @@ import boto3
 from lambda_function import *
 import json
 
+
+class ContextStub:
+	def __init__(self, function_name, aws_request_id):
+		self.function_name = function_name
+		self.aws_request_id = aws_request_id
+
+
 event_one_file = {
 	"Records": [
 		{
@@ -63,8 +70,10 @@ class TestMethods(unittest.TestCase):
 		os.environ["regex_1"] = "[^a-zA-Z0-9\\n \\(\\);\'_\-+\n\t\{\}\*]+-;-"
 		os.environ["regex_2"] = "\n-;-     "
 
+		context = ContextStub("aws-code-index-escape-files", "0000000001")
+
 		# Act
-		result = lambda_handler(event_one_file, None)
+		result = lambda_handler(event_one_file, context)
 		print(json.dumps(result, indent=3))
 
 		# Assert
