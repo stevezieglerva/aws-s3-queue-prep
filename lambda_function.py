@@ -22,10 +22,7 @@ def lambda_handler(event, context):
 			log = structlog.get_logger()
 		else:
 			log = setup_logging()
-			log = log.bind(lambda_name="aws-s3-queue-prep")
-		if context is not None:
 			log = log.bind(aws_request_id=context.aws_request_id)
-			print(context.function_name)
 			log = log.bind(lambda_name=context.function_name)
 		log.critical("started", input_events=json.dumps(event, indent=3))
 
