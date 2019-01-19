@@ -42,11 +42,13 @@ def lambda_handler(event, context):
 		file_text = get_file_text_from_s3_file_urls(file_refs, s3)
 		print("Found files:")
 		count = 0
+		bytes_processed = 0
 		for file in file_text:
 			count = count + 1 
 			print(str(count) + ". " + file)
 			log = log.bind(processing_file=file)
 			text = file_text[file]
+			bytes_processed = len(text)
 			for env_variable in ["regex_1", "regex_2", "regex_3"]:
 				if env_vars[env_variable] != "":
 					regex_parts = env_vars[env_variable].split("-;-")
@@ -59,7 +61,7 @@ def lambda_handler(event, context):
 		print("finished")
 		return_message = get_return_message("Success", file_refs)
 		print("")
-		log.critical("process_results", input_file_count=len(file_refs), processed_file_count=count)
+		log.critical("process_results", input_file_count=len(file_refs), processed_file_count=count, bytes_processed=bytes_processed)
 		log.critical("finished", return_message=json.dumps(return_message, indent=3))
 		return return_message
 	except Exception as e:
