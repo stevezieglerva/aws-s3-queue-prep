@@ -63,6 +63,7 @@ def lambda_handler(event, context):
 		print("")
 		log.critical("process_results", input_file_count=len(file_refs), processed_file_count=count, bytes_processed=bytes_processed)
 		log.critical("finished", return_message=json.dumps(return_message, indent=3))
+		# throw away comment
 		return return_message
 	except Exception as e:
 		exception_name = type(e).__name__
